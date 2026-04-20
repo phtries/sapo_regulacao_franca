@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAPO - UAC</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="./img/icon.ico">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <nav class="topbar">
+        <div class="logo">🐸 SAPO</div>
+        <div class="menu">
+            <button onclick="mudarAba('aba-medicos')" class="tab-btn active" id="btn-medicos">MÉDICOS</button>
+            <button onclick="mudarAba('aba-cirurgias')" class="tab-btn" id="btn-cirurgias">CIRURGIAS</button>
+            <button onclick="mudarAba('aba-individual')" class="tab-btn" id="btn-individual">PRÉ INDIVIDUAL</button>
+            <button onclick="mudarAba('aba-lote')" class="tab-btn" id="btn-lote">PRÉ LOTE</button>
+        </div>
+        <div class="status-firebase" id="status-firebase">⏳ Conectando...</div>
+    </nav>
+
+    <!-- ABA MÉDICOS -->
+    <section id="aba-medicos" class="aba-conteudo active">
+        <div class="header-aba">
+            <h2>Gerenciar Médicos</h2>
+            <button onclick="abrirModalMedico()" class="btn-novo">➕ Novo Médico</button>
+        </div>
+        <div id="loading-medicos" class="loading-msg">Carregando...</div>
+        <ul id="lista-medicos" class="lista-itens"></ul>
+    </section>
+
+    <!-- ABA CIRURGIAS -->
+    <section id="aba-cirurgias" class="aba-conteudo">
+        <div class="header-aba">
+            <h2>Gerenciar Cirurgias e Protocolos</h2>
+            <button onclick="abrirModalCirurgia()" class="btn-novo">➕ Nova Cirurgia</button>
+        </div>
+        <div id="loading-cirurgias" class="loading-msg">Carregando...</div>
+        <ul id="lista-cirurgias" class="lista-itens"></ul>
+    </section>
+
+    <!-- ABA PRÉ INDIVIDUAL -->
+    <section id="aba-individual" class="aba-conteudo">
+        <div class="header-aba">
+            <h2>Gerar Pré-Operatório Individual</h2>
+        </div>
+        <div class="form-card">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Matrícula:</label>
+                    <input type="text" id="ind-mat" placeholder="Ex: 123456">
+                </div>
+                <div class="form-group">
+                    <label>Nome do Paciente:</label>
+                    <input type="text" id="ind-nome" placeholder="Nome completo">
+                </div>
+                <div class="form-group">
+                    <label>Data de Nascimento:</label>
+                    <input type="date" id="ind-data">
+                </div>
+                <div class="form-group">
+                    <label>Cirurgia:</label>
+                    <select id="ind-cirurgia">
+                        <option value="">-- Selecione a cirurgia --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Médico Solicitante: <span class="opcional">(opcional)</span></label>
+                    <select id="ind-medico">
+                        <option value="">-- Selecione o médico --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Data de Emissão:</label>
+                    <input type="date" id="ind-emissao">
+                </div>
+            </div>
+            <button class="btn-acao" onclick="gerarPDFIndividual()">📄 Gerar PDF</button>
+        </div>
+    </section>
+
+    <!-- ABA PRÉ LOTE -->
+    <section id="aba-lote" class="aba-conteudo">
+        <div class="header-aba">
+            <h2>Gerar Pré-Operatório em Lote</h2>
+        </div>
+        <div class="form-card">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Selecione a Planilha (.xlsx, .ods):</label>
+                    <input type="file" id="lote-arquivo" accept=".xlsx,.xls,.ods">
+                </div>
+                <div class="form-group">
+                    <label>Cirurgia (mesma para todos):</label>
+                    <select id="lote-cirurgia">
+                        <option value="">-- Selecione a cirurgia --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Médico Solicitante: <span class="opcional">(opcional)</span></label>
+                    <select id="lote-medico">
+                        <option value="">-- Selecione o médico --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Data de Emissão:</label>
+                    <input type="date" id="lote-emissao">
+                </div>
+            </div>
+
+            <div id="lote-preview" class="lote-preview" style="display:none;">
+                <h4>📋 Pacientes encontrados na planilha:</h4>
+                <table id="tabela-preview">
+                    <thead><tr><th>Matrícula</th><th>Nome</th><th>Data de Nasc.</th></tr></thead>
+                    <tbody id="tbody-preview"></tbody>
+                </table>
+            </div>
+
+            <button class="btn-acao" onclick="processarLote()">📦 Processar e Gerar PDF em Lote</button>
+        </div>
+    </section>
+
+    <!-- MODAL MÉDICO -->
+    <dialog id="modal-medico" class="modal">
+        <h3>Cadastrar/Editar Médico</h3>
+        <input type="hidden" id="medico-id">
+        <div class="form-group">
+            <label>Nome Completo:</label>
+            <input type="text" id="medico-nome" placeholder="Dr. Nome...">
+        </div>
+        <div class="form-group">
+            <label>CRM/Registro:</label>
+            <input type="text" id="medico-crm" placeholder="12345-SP">
+        </div>
+        <div class="modal-botoes">
+            <button onclick="fecharModal('modal-medico')" class="btn-cancelar">Cancelar</button>
+            <button onclick="salvarMedico()" class="btn-salvar">Salvar</button>
+        </div>
+    </dialog>
+
+    <!-- MODAL CIRURGIA -->
+    <dialog id="modal-cirurgia" class="modal modal-largo">
+        <h3>Cadastrar/Editar Cirurgia</h3>
+        <input type="hidden" id="cirurgia-id">
+        <div class="form-group">
+            <label>Nome da Cirurgia:</label>
+            <input type="text" id="cirurgia-nome" placeholder="Ex: Colecistectomia">
+        </div>
+
+        <div class="grupos-exames">
+            <div class="grupo-bloco" id="grupo-analises">
+                <div class="grupo-header">🧪 Análises Clínicas <span class="grupo-tag">Um único SADT</span></div>
+                <div class="grupo-linhas" id="linhas-analises"></div>
+                <button onclick="adicionarLinhaExame('analises')" class="btn-linha">➕ Adicionar Exame</button>
+            </div>
+            <div class="grupo-bloco" id="grupo-raio">
+                <div class="grupo-header">☢️ Raio-X <span class="grupo-tag">Um SADT por exame</span></div>
+                <div class="grupo-linhas" id="linhas-raio"></div>
+                <button onclick="adicionarLinhaExame('raio')" class="btn-linha">➕ Adicionar Exame</button>
+            </div>
+            <div class="grupo-bloco" id="grupo-ultrassom">
+                <div class="grupo-header">🔊 Ultrassom <span class="grupo-tag">Um SADT por exame</span></div>
+                <div class="grupo-linhas" id="linhas-ultrassom"></div>
+                <button onclick="adicionarLinhaExame('ultrassom')" class="btn-linha">➕ Adicionar Exame</button>
+            </div>
+            <div class="grupo-bloco" id="grupo-outros">
+                <div class="grupo-header">📋 Outros <span class="grupo-tag">Um SADT por exame</span></div>
+                <div class="grupo-linhas" id="linhas-outros"></div>
+                <button onclick="adicionarLinhaExame('outros')" class="btn-linha">➕ Adicionar Exame</button>
+            </div>
+        </div>
+
+        <div class="modal-botoes mt-20">
+            <button onclick="fecharModal('modal-cirurgia')" class="btn-cancelar">Cancelar</button>
+            <button onclick="salvarCirurgia()" class="btn-salvar">Salvar Cirurgia</button>
+        </div>
+    </dialog>
+
+    <!-- MODAL DE PROGRESSO -->
+    <dialog id="modal-progresso" class="modal">
+        <h3>⏳ Gerando PDFs...</h3>
+        <p id="progresso-texto">Processando pacientes...</p>
+        <div class="barra-progresso">
+            <div class="barra-fill" id="barra-fill"></div>
+        </div>
+    </dialog>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
