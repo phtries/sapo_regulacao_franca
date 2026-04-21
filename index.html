@@ -10,7 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-
     <nav class="topbar">
         <div class="logo">🐸 SAPO</div>
         <div class="menu">
@@ -22,7 +21,6 @@
         <div class="status-firebase" id="status-firebase">⏳ Conectando...</div>
     </nav>
 
-    <!-- ABA MÉDICOS -->
     <section id="aba-medicos" class="aba-conteudo active">
         <div class="header-aba">
             <h2>Gerenciar Médicos</h2>
@@ -32,7 +30,6 @@
         <ul id="lista-medicos" class="lista-itens"></ul>
     </section>
 
-    <!-- ABA CIRURGIAS -->
     <section id="aba-cirurgias" class="aba-conteudo">
         <div class="header-aba">
             <h2>Gerenciar Cirurgias e Protocolos</h2>
@@ -42,7 +39,6 @@
         <ul id="lista-cirurgias" class="lista-itens"></ul>
     </section>
 
-    <!-- ABA PRÉ INDIVIDUAL -->
     <section id="aba-individual" class="aba-conteudo">
         <div class="header-aba">
             <h2>Gerar Pré-Operatório Individual</h2>
@@ -82,7 +78,6 @@
         </div>
     </section>
 
-    <!-- ABA PRÉ LOTE -->
     <section id="aba-lote" class="aba-conteudo">
         <div class="header-aba">
             <h2>Gerar Pré-Operatório em Lote</h2>
@@ -123,7 +118,6 @@
         </div>
     </section>
 
-    <!-- MODAL MÉDICO -->
     <dialog id="modal-medico" class="modal">
         <h3>Cadastrar/Editar Médico</h3>
         <input type="hidden" id="medico-id">
@@ -141,7 +135,6 @@
         </div>
     </dialog>
 
-    <!-- MODAL CIRURGIA -->
     <dialog id="modal-cirurgia" class="modal modal-largo">
         <h3>Cadastrar/Editar Cirurgia</h3>
         <input type="hidden" id="cirurgia-id">
@@ -152,7 +145,7 @@
 
         <div class="grupos-exames">
             <div class="grupo-bloco" id="grupo-analises">
-                <div class="grupo-header">🧪 Análises Clínicas <span class="grupo-tag">Um único SADT</span></div>
+                <div class="grupo-header">🧪 Análises Clínicas <span class="grupo-tag">Máx. 10 por SADT</span></div>
                 <div class="grupo-linhas" id="linhas-analises"></div>
                 <button onclick="adicionarLinhaExame('analises')" class="btn-linha">➕ Adicionar Exame</button>
             </div>
@@ -179,7 +172,6 @@
         </div>
     </dialog>
 
-    <!-- MODAL DE PROGRESSO -->
     <dialog id="modal-progresso" class="modal">
         <h3>⏳ Gerando PDFs...</h3>
         <p id="progresso-texto">Processando pacientes...</p>

@@ -23,7 +23,6 @@ body {
     color: var(--text);
 }
 
-/* ─── TOP BAR ─── */
 .topbar {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     display: flex;
@@ -80,7 +79,6 @@ body {
 .status-ok { color: #68d391 !important; }
 .status-erro { color: #fc8181 !important; }
 
-/* ─── ABAS ─── */
 .aba-conteudo {
     display: none;
     padding: 30px;
@@ -105,7 +103,6 @@ body {
     font-size: 1.4rem;
 }
 
-/* ─── BOTÕES ─── */
 button { cursor: pointer; border-radius: var(--radius); border: none; font-weight: 600; transition: all 0.2s; }
 
 .btn-novo {
@@ -157,7 +154,6 @@ button { cursor: pointer; border-radius: var(--radius); border: none; font-weigh
 
 .btn-linha:hover { background: #dbeafe; }
 
-/* ─── LISTAS ─── */
 .lista-itens { list-style: none; padding: 0; margin: 0; }
 
 .lista-itens li {
@@ -195,7 +191,6 @@ button { cursor: pointer; border-radius: var(--radius); border: none; font-weigh
     font-style: italic;
 }
 
-/* ─── FORM CARD ─── */
 .form-card {
     background: var(--white);
     border-radius: var(--radius);
@@ -240,7 +235,6 @@ input:focus, select:focus {
     box-shadow: 0 0 0 3px rgba(0,86,179,0.1);
 }
 
-/* ─── LOTE PREVIEW ─── */
 .lote-preview {
     margin-top: 20px;
     background: #f7fafc;
@@ -272,7 +266,6 @@ input:focus, select:focus {
 #tabela-preview tr:last-child td { border-bottom: none; }
 #tabela-preview tr:nth-child(even) td { background: #edf2f7; }
 
-/* ─── MODAL ─── */
 .modal {
     border: none;
     border-radius: 12px;
@@ -298,7 +291,6 @@ input:focus, select:focus {
 
 .mt-20 { margin-top: 20px; }
 
-/* ─── GRUPOS DE EXAMES ─── */
 .grupos-exames { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
 
 .grupo-bloco {
@@ -348,7 +340,6 @@ input:focus, select:focus {
 
 .linha-exame .btn-remover:hover { opacity: 1; color: var(--danger); }
 
-/* ─── BARRA DE PROGRESSO ─── */
 .barra-progresso {
     background: var(--border);
     border-radius: 20px;
@@ -365,7 +356,6 @@ input:focus, select:focus {
     transition: width 0.3s ease;
 }
 
-/* ─── RESPONSIVO ─── */
 @media (max-width: 600px) {
     .form-grid { grid-template-columns: 1fr; }
     .modal { width: 95vw; }

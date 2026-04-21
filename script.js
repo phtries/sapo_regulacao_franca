@@ -1,15 +1,9 @@
-// ════════════════════════════════════════════
-//  SAPO - Script Principal
-//  Firebase Firestore + Geração de PDF (Impressão Direta)
-// ════════════════════════════════════════════
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
     getFirestore, collection, getDocs, addDoc,
     updateDoc, deleteDoc, doc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ─── CONFIGURAÇÃO FIREBASE ───
 const firebaseConfig = {
     apiKey: "AIzaSyAgm7PskOIg8ORc_gUg_HRovnPBBrDFs-o",
     authDomain: "sapo-36f2f.firebaseapp.com",
@@ -21,18 +15,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
-// Status de conexão visual
 const statusEl = document.getElementById('status-firebase');
-
-// ─── BANCOS EM MEMÓRIA (sincronizados do Firestore) ───
 let bdMedicos = [];
 let bdCirurgias = [];
 
-
-// ════════════════════════════════════════════
-//  1. NAVEGAÇÃO DE ABAS
-// ════════════════════════════════════════════
 window.mudarAba = function(idAba) {
     document.querySelectorAll('.aba-conteudo').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -40,10 +26,6 @@ window.mudarAba = function(idAba) {
     document.getElementById(idAba.replace('aba-', 'btn-')).classList.add('active');
 };
 
-
-// ════════════════════════════════════════════
-//  2. LISTENERS EM TEMPO REAL (Firestore)
-// ════════════════════════════════════════════
 function iniciarListeners() {
     onSnapshot(collection(db, 'medicos'), (snapshot) => {
         bdMedicos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -66,10 +48,6 @@ function iniciarListeners() {
     });
 }
 
-
-// ════════════════════════════════════════════
-//  3. MÉDICOS
-// ════════════════════════════════════════════
 function renderizarMedicos() {
     const lista = document.getElementById('lista-medicos');
     lista.innerHTML = '';
@@ -141,10 +119,6 @@ window.excluirMedico = async function(id) {
     await deleteDoc(doc(db, 'medicos', id));
 };
 
-
-// ════════════════════════════════════════════
-//  4. CIRURGIAS
-// ════════════════════════════════════════════
 function renderizarCirurgias() {
     const lista = document.getElementById('lista-cirurgias');
     lista.innerHTML = '';
@@ -240,10 +214,6 @@ window.excluirCirurgia = async function(id) {
     await deleteDoc(doc(db, 'cirurgias', id));
 };
 
-
-// ════════════════════════════════════════════
-//  5. LEITURA DE PLANILHA (PRÉ LOTE)
-// ════════════════════════════════════════════
 let pacientesLote = [];
 
 document.getElementById('lote-arquivo').addEventListener('change', function(e) {
@@ -289,11 +259,6 @@ document.getElementById('lote-arquivo').addEventListener('change', function(e) {
     reader.readAsBinaryString(file);
 });
 
-
-// ════════════════════════════════════════════
-//  6. GERAÇÃO DE PDF E IMPRESSÃO
-// ════════════════════════════════════════════
-
 function formatarData(valor) {
     if (!valor) return '';
     if (typeof valor === 'string' && valor.includes('-')) {
@@ -303,7 +268,6 @@ function formatarData(valor) {
     return valor;
 }
 
-// NOVA FUNÇÃO: Calcula idade para decidir o formulário
 function calcularIdade(dataNasc) {
     if (!dataNasc) return 99; 
     let nasc;
@@ -343,16 +307,16 @@ function gerarSADT(pdf, paciente, medico, exames, titulo, dataEmissao, imagemFun
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
     pdf.setTextColor(0, 0, 0);
-    pdf.text(paciente.nome, 40, 59);
-    pdf.text(paciente.matricula, 45, 54);
-    pdf.text(formatarData(paciente.dataNasc), 120, 54);
-    pdf.text(medico || '', 75, 135);
-    pdf.text(dataEmissao, 122, 89);
+    pdf.text(paciente.nome, 40, 64.2);
+    pdf.text(paciente.matricula, 45, 59.2);
+    pdf.text(formatarData(paciente.dataNasc), 120, 59.2);
+    pdf.text(medico || '', 75, 147.2);
+    pdf.text(dataEmissao, 121, 94);
 
-    let yExame = 89;
+    let yExame = 94;
     exames.forEach(ex => {
         const textoExame = `${ex.codigo ? ex.codigo + ' - ' : ''}${ex.nome}`;
-        pdf.text(textoExame, 30, yExame);
+        pdf.text(textoExame, 29.5, yExame);
         yExame += 5;
     });
 }
@@ -367,18 +331,13 @@ function gerarAvaliacao(pdf, paciente, imagemFundo) {
     pdf.text(formatarData(paciente.dataNasc), 49, 51);
 }
 
-function gerarLembreteDoc(pdf, paciente, imagemFundo, temRaioX) {
+function gerarLembreteDoc(pdf, paciente, imagemFundo) {
     pdf.addImage(imagemFundo, 'JPEG', 0, 0, 210, 297);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
     pdf.setTextColor(0, 0, 0);
     pdf.text(paciente.nome, 12, 17);
     pdf.text(paciente.matricula, 12, 13);
-    pdf.text("X", 25.2, 81.2); 
-    pdf.text("X", 50.2, 81.2); 
-    if (temRaioX) {
-        pdf.text("X", 100.2, 81.2); 
-    }
 }
 
 async function gerarPDFPaciente(paciente, cirurgia, medico, dataEmissao) {
@@ -400,9 +359,10 @@ async function gerarPDFPaciente(paciente, cirurgia, medico, dataEmissao) {
 
     const exames = cirurgia.exames || [];
     const analises = exames.filter(e => e.grupo === 'analises');
-    if (analises.length > 0) {
+    
+    for (let j = 0; j < analises.length; j += 10) {
         addPage();
-        gerarSADT(pdf, paciente, medico, analises, 'Análises Clínicas', dataEmissao, imgSadt);
+        gerarSADT(pdf, paciente, medico, analises.slice(j, j + 10), 'Análises Clínicas', dataEmissao, imgSadt);
     }
 
     const outrosGrupos = exames.filter(e => e.grupo !== 'analises');
@@ -415,16 +375,10 @@ async function gerarPDFPaciente(paciente, cirurgia, medico, dataEmissao) {
     gerarAvaliacao(pdf, paciente, imgAvaliacao);
 
     addPage();
-    const temRaioX = exames.filter(e => e.grupo === 'raio').length > 0;
-    gerarLembreteDoc(pdf, paciente, imgLembrete, temRaioX);
+    gerarLembreteDoc(pdf, paciente, imgLembrete);
 
     return pdf;
 }
-
-
-// ════════════════════════════════════════════
-//  7. AÇÕES DAS ABAS (Impressão Direta)
-// ════════════════════════════════════════════
 
 window.gerarPDFIndividual = async function() {
     const mat = document.getElementById('ind-mat').value.trim();
@@ -479,7 +433,7 @@ window.processarLote = async function() {
 
     const imgSadt = await carregarImagem('./img/sadt.jpg');
     const imgAvaliacao = await carregarImagem('./img/avaliacao.jpg');
-    const imgAvaliacaoInfantil = await carregarImagem('./img/avaliacao_infantil.jpg'); // PRÉ-CARGA INFANTIL
+    const imgAvaliacaoInfantil = await carregarImagem('./img/avaliacao_infantil.jpg');
     const imgLembrete = await carregarImagem('./img/lembrete.jpg');
 
     const { jsPDF } = window.jspdf;
@@ -500,7 +454,6 @@ window.processarLote = async function() {
         const ultrassons = exames.filter(e => e.grupo === 'ultrassom');
         const outros = exames.filter(e => e.grupo === 'outros');
         
-        const temRaioX = raios.length > 0;
         const idade = calcularIdade(p.dataNasc);
         const imgAvaliacaoUsar = idade < 12 ? imgAvaliacaoInfantil : imgAvaliacao;
 
@@ -510,23 +463,21 @@ window.processarLote = async function() {
             primeiroPaciente = false;
         };
 
-        if (analises.length > 0) addPag(gerarSADT, p, medico, analises, 'Análises Clínicas', dataEmissao, imgSadt);
+        for (let j = 0; j < analises.length; j += 10) {
+            addPag(gerarSADT, p, medico, analises.slice(j, j + 10), 'Análises Clínicas', dataEmissao, imgSadt);
+        }
+        
         raios.forEach(ex => addPag(gerarSADT, p, medico, [ex], 'Raio-X', dataEmissao, imgSadt));
         ultrassons.forEach(ex => addPag(gerarSADT, p, medico, [ex], 'Ultrassom', dataEmissao, imgSadt));
         outros.forEach(ex => addPag(gerarSADT, p, medico, [ex], 'Outros', dataEmissao, imgSadt));
         
         addPag(gerarAvaliacao, p, imgAvaliacaoUsar);
-        addPag(gerarLembreteDoc, p, imgLembrete, temRaioX);
+        addPag(gerarLembreteDoc, p, imgLembrete);
     }
 
     modalProg.close();
     dispararImpressao(pdfFinal);
 };
-
-
-// ════════════════════════════════════════════
-//  8. UTILS E INICIALIZAÇÃO
-// ════════════════════════════════════════════
 
 window.fecharModal = function(idModal) {
     document.getElementById(idModal).close();
