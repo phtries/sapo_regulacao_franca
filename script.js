@@ -321,14 +321,21 @@ function gerarSADT(pdf, paciente, medico, exames, titulo, dataEmissao, imagemFun
     });
 }
 
-function gerarAvaliacao(pdf, paciente, imagemFundo) {
+function gerarAvaliacao(pdf, paciente, imagemFundo, ehInfantil) {
     pdf.addImage(imagemFundo, 'JPEG', 0, 0, 210, 297);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(12);
     pdf.setTextColor(0, 0, 0);
-    pdf.text(paciente.nome, 35, 42);
-    pdf.text(paciente.matricula, 169, 42);
-    pdf.text(formatarData(paciente.dataNasc), 49, 51);
+    
+    if (ehInfantil) {
+        pdf.text(paciente.nome, 38, 48.3);
+        pdf.text(paciente.matricula, 164, 48.3);
+        pdf.text(formatarData(paciente.dataNasc), 53, 56.8);
+    } else {
+        pdf.text(paciente.nome, 35, 42);
+        pdf.text(paciente.matricula, 169, 42);
+        pdf.text(formatarData(paciente.dataNasc), 49, 51);
+    }
 }
 
 function gerarLembreteDoc(pdf, paciente, imagemFundo) {
@@ -345,7 +352,8 @@ async function gerarPDFPaciente(paciente, cirurgia, medico, dataEmissao) {
     const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
     
     const idade = calcularIdade(paciente.dataNasc);
-    const imgAvaliacaoPath = idade < 12 ? './img/avaliacao_infantil.jpg' : './img/avaliacao.jpg';
+    const ehInfantil = idade < 12;
+    const imgAvaliacaoPath = ehInfantil ? './img/avaliacao_infantil.jpg' : './img/avaliacao.jpg';
 
     const imgSadt = await carregarImagem('./img/sadt.jpg');
     const imgAvaliacao = await carregarImagem(imgAvaliacaoPath);
@@ -372,7 +380,7 @@ async function gerarPDFPaciente(paciente, cirurgia, medico, dataEmissao) {
     });
 
     addPage();
-    gerarAvaliacao(pdf, paciente, imgAvaliacao);
+    gerarAvaliacao(pdf, paciente, imgAvaliacao, ehInfantil);
 
     addPage();
     gerarLembreteDoc(pdf, paciente, imgLembrete);
@@ -455,7 +463,8 @@ window.processarLote = async function() {
         const outros = exames.filter(e => e.grupo === 'outros');
         
         const idade = calcularIdade(p.dataNasc);
-        const imgAvaliacaoUsar = idade < 12 ? imgAvaliacaoInfantil : imgAvaliacao;
+        const ehInfantil = idade < 12;
+        const imgAvaliacaoUsar = ehInfantil ? imgAvaliacaoInfantil : imgAvaliacao;
 
         const addPag = (fn, ...args) => {
             if (!primeiroPaciente) pdfFinal.addPage();
@@ -471,7 +480,7 @@ window.processarLote = async function() {
         ultrassons.forEach(ex => addPag(gerarSADT, p, medico, [ex], 'Ultrassom', dataEmissao, imgSadt));
         outros.forEach(ex => addPag(gerarSADT, p, medico, [ex], 'Outros', dataEmissao, imgSadt));
         
-        addPag(gerarAvaliacao, p, imgAvaliacaoUsar);
+        addPag(gerarAvaliacao, p, imgAvaliacaoUsar, ehInfantil);
         addPag(gerarLembreteDoc, p, imgLembrete);
     }
 
