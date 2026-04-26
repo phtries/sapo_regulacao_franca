@@ -11,14 +11,19 @@
 </head>
 <body>
     <nav class="topbar">
-        <div class="logo">🐸 SAPO</div>
-        <div class="menu">
+        <div class="logo-area">
+            <div class="logo">🐸 SAPO</div>
+        </div>
+        <div class="menu-tabs">
             <button onclick="mudarAba('aba-medicos')" class="tab-btn active" id="btn-medicos">MÉDICOS</button>
             <button onclick="mudarAba('aba-cirurgias')" class="tab-btn" id="btn-cirurgias">CIRURGIAS</button>
             <button onclick="mudarAba('aba-individual')" class="tab-btn" id="btn-individual">PRÉ INDIVIDUAL</button>
             <button onclick="mudarAba('aba-lote')" class="tab-btn" id="btn-lote">PRÉ LOTE</button>
         </div>
-        <div class="status-firebase" id="status-firebase">⏳ Conectando...</div>
+        <div class="status-area">
+            <div class="status-firebase" id="status-firebase">⏳ Conectando...</div>
+            <button onclick="abrirModalConfig()" class="btn-config" title="Configurações do Banco">⚙️</button>
+        </div>
     </nav>
 
     <section id="aba-medicos" class="aba-conteudo active">
@@ -46,8 +51,8 @@
         <div class="form-card">
             <div class="form-grid">
                 <div class="form-group">
-                    <label>Matrícula:</label>
-                    <input type="text" id="ind-mat" placeholder="Ex: 123456">
+                    <label>Matrícula: <span class="sub-label">(Busca automática)</span></label>
+                    <input type="text" id="ind-mat" placeholder="Digite para buscar...">
                 </div>
                 <div class="form-group">
                     <label>Nome do Paciente:</label>
@@ -74,7 +79,7 @@
                     <input type="date" id="ind-emissao">
                 </div>
             </div>
-            <button class="btn-acao" onclick="gerarPDFIndividual()">📄 Imprimir</button>
+            <button class="btn-acao" onclick="gerarPDFIndividual()">🖨️ Imprimir</button>
         </div>
     </section>
 
@@ -105,7 +110,6 @@
                     <input type="date" id="lote-emissao">
                 </div>
             </div>
-
             <div id="lote-preview" class="lote-preview" style="display:none;">
                 <h4>📋 Pacientes encontrados na planilha:</h4>
                 <table id="tabela-preview">
@@ -113,8 +117,7 @@
                     <tbody id="tbody-preview"></tbody>
                 </table>
             </div>
-
-            <button class="btn-acao" onclick="processarLote()">📦 Imprimir</button>
+            <button class="btn-acao" onclick="processarLote()">🖨️ Imprimir em Lote</button>
         </div>
     </section>
 
@@ -142,30 +145,28 @@
             <label>Nome da Cirurgia:</label>
             <input type="text" id="cirurgia-nome" placeholder="Ex: Colecistectomia">
         </div>
-
         <div class="grupos-exames">
-            <div class="grupo-bloco" id="grupo-analises">
+            <div class="grupo-bloco">
                 <div class="grupo-header">🧪 Análises Clínicas <span class="grupo-tag">Máx. 10 por SADT</span></div>
                 <div class="grupo-linhas" id="linhas-analises"></div>
                 <button onclick="adicionarLinhaExame('analises')" class="btn-linha">➕ Adicionar Exame</button>
             </div>
-            <div class="grupo-bloco" id="grupo-raio">
+            <div class="grupo-bloco">
                 <div class="grupo-header">☢️ Raio-X <span class="grupo-tag">Um SADT por exame</span></div>
                 <div class="grupo-linhas" id="linhas-raio"></div>
                 <button onclick="adicionarLinhaExame('raio')" class="btn-linha">➕ Adicionar Exame</button>
             </div>
-            <div class="grupo-bloco" id="grupo-ultrassom">
+            <div class="grupo-bloco">
                 <div class="grupo-header">🔊 Ultrassom <span class="grupo-tag">Um SADT por exame</span></div>
                 <div class="grupo-linhas" id="linhas-ultrassom"></div>
                 <button onclick="adicionarLinhaExame('ultrassom')" class="btn-linha">➕ Adicionar Exame</button>
             </div>
-            <div class="grupo-bloco" id="grupo-outros">
+            <div class="grupo-bloco">
                 <div class="grupo-header">📋 Outros <span class="grupo-tag">Um SADT por exame</span></div>
                 <div class="grupo-linhas" id="linhas-outros"></div>
                 <button onclick="adicionarLinhaExame('outros')" class="btn-linha">➕ Adicionar Exame</button>
             </div>
         </div>
-
         <div class="modal-botoes mt-20">
             <button onclick="fecharModal('modal-cirurgia')" class="btn-cancelar">Cancelar</button>
             <button onclick="salvarCirurgia()" class="btn-salvar">Salvar Cirurgia</button>
@@ -173,10 +174,23 @@
     </dialog>
 
     <dialog id="modal-progresso" class="modal">
-        <h3>⏳ Gerando PDFs...</h3>
+        <h3>⏳ Gerando Documentos...</h3>
         <p id="progresso-texto">Processando pacientes...</p>
         <div class="barra-progresso">
             <div class="barra-fill" id="barra-fill"></div>
+        </div>
+    </dialog>
+
+    <dialog id="modal-config" class="modal">
+        <h3>⚙️ Configurações da Base</h3>
+        <p id="contagem-pacientes" class="count-db">📊 Última carga: Carregando...</p>
+        <p class="desc-modal">Suba uma planilha (.xlsx ou .csv) para atualizar o banco de dados na nuvem.</p>
+        <div class="form-group">
+            <input type="file" id="arquivo-nuvem-pacientes" accept=".xlsx,.xls,.ods,.csv">
+        </div>
+        <div class="modal-botoes mt-20">
+            <button onclick="fecharModal('modal-config')" class="btn-cancelar">Cancelar</button>
+            <button id="btn-subir-base" onclick="subirBasePacientes()" class="btn-salvar-base">🚀 Enviar para Nuvem</button>
         </div>
     </dialog>
 
