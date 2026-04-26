@@ -337,7 +337,7 @@ function gerarAvaliacao(pdf, p, img, ehI) {
     pdf.addImage(img, 'JPEG', 0, 0, 210, 297);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(12);
-    if (ehI) { pdf.text(p.nome, 35, 42); pdf.text(p.matricula, 169, 42); pdf.text(formatarData(p.dataNasc), 49, 51); }
+    if (ehI) { pdf.text(p.nome, 37.5, 48.5); pdf.text(p.matricula, 164, 48.5); pdf.text(formatarData(p.dataNasc), 54, 56.5)}
     else { pdf.text(p.nome, 35, 42); pdf.text(p.matricula, 169, 42); pdf.text(formatarData(p.dataNasc), 49, 51); }
 }
 
