@@ -328,7 +328,7 @@ function gerarSADT(pdf, p, m, exames, t, dEmissao, img) {
     pdf.text(p.matricula, 45, 59.2);
     pdf.text(formatarData(p.dataNasc), 120, 59.2);
     pdf.text(m || '', 75, 147.2);
-    pdf.text(dEmissao, 121, 94);
+    pdf.text(dEmissao, 49.5, 84.1);
     let y = 94;
     exames.forEach(ex => { pdf.text(`${ex.codigo ? ex.codigo + ' - ' : ''}${ex.nome}`, 29.5, y); y += 5; });
 }
