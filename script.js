@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-    getFirestore, collection, getDocs, addDoc, setDoc,
+    getFirestore, collection, getDocs, addDoc, setDoc, query, where,
     updateDoc, deleteDoc, doc, onSnapshot, getDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -18,13 +18,28 @@ const db = getFirestore(app);
 const statusEl = document.getElementById('status-firebase');
 let bdMedicos = [];
 let bdCirurgias = [];
+let variavelAno = new Date().getFullYear().toString();
+
+function getHojeLocal() {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().split('T')[0];
+}
 
 window.mudarAba = function(idAba) {
     document.querySelectorAll('.aba-conteudo').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(idAba).classList.add('active');
-    document.getElementById(idAba.replace('aba-', 'btn-')).classList.add('active');
+    const btn = document.getElementById(idAba.replace('aba-', 'btn-'));
+    if(btn) btn.classList.add('active');
 };
+
+function mostrarToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.className = "toast show";
+    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+}
 
 function iniciarListeners() {
     onSnapshot(collection(db, 'medicos'), (snapshot) => {
@@ -34,7 +49,7 @@ function iniciarListeners() {
         statusEl.textContent = '🟢 Conectado';
         statusEl.classList.add('status-ok');
         document.getElementById('loading-medicos').style.display = 'none';
-    }, (err) => {
+    }, () => {
         statusEl.textContent = '🔴 Erro de conexão';
         statusEl.classList.add('status-erro');
     });
@@ -44,28 +59,22 @@ function iniciarListeners() {
         renderizarCirurgias();
         popularDropdownCirurgias();
         document.getElementById('loading-cirurgias').style.display = 'none';
+        const meta = bdCirurgias.find(c => c.id === 'METADADOS_BASE');
+        if (meta && meta.ano) variavelAno = meta.ano;
     });
 }
 
 function renderizarMedicos() {
     const lista = document.getElementById('lista-medicos');
     lista.innerHTML = '';
-    if (bdMedicos.length === 0) {
-        lista.innerHTML = '<p style="color:#718096;text-align:center;padding:20px;">Nenhum médico cadastrado.</p>';
-        return;
-    }
-    bdMedicos.forEach((medico) => {
+    if (bdMedicos.length === 0) return lista.innerHTML = '<p style="color:#718096;text-align:center;padding:20px;">Nenhum médico cadastrado.</p>';
+    
+    const medicosOrdenados = [...bdMedicos].sort((a, b) => a.nome.localeCompare(b.nome));
+    
+    medicosOrdenados.forEach((medico) => {
         const li = document.createElement('li');
-        li.innerHTML = `
-            <div>
-                <strong>${medico.nome}</strong>
-                ${medico.crm ? `<span style="color:#718096; font-size:0.85rem;"> — CRM: ${medico.crm}</span>` : ''}
-            </div>
-            <div class="acoes-lista">
-                <button onclick="abrirModalMedico('${medico.id}')">✏️</button>
-                <button onclick="excluirMedico('${medico.id}')">🗑️</button>
-            </div>
-        `;
+        li.innerHTML = `<div><strong>${medico.nome}</strong>${medico.crm ? `<span style="color:#718096; font-size:0.85rem;"> — CRM: ${medico.crm}</span>` : ''}</div>
+            <div class="acoes-lista"><button onclick="abrirModalMedico('${medico.id}')">✏️</button><button onclick="excluirMedico('${medico.id}')">🗑️</button></div>`;
         lista.appendChild(li);
     });
 }
@@ -75,9 +84,10 @@ function popularDropdownMedicos() {
         const sel = document.getElementById(id);
         const val = sel.value;
         sel.innerHTML = '<option value="">-- Sem médico --</option>';
-        bdMedicos.forEach(m => {
-            sel.innerHTML += `<option value="${m.id}">${m.nome}${m.crm ? ' (CRM: ' + m.crm + ')' : ''}</option>`;
-        });
+        
+        const medicosOrdenados = [...bdMedicos].sort((a, b) => a.nome.localeCompare(b.nome));
+        
+        medicosOrdenados.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.nome}${m.crm ? ' (CRM: ' + m.crm + ')' : ''}</option>`);
         sel.value = val;
     });
 }
@@ -99,12 +109,13 @@ window.salvarMedico = async function() {
     const id = document.getElementById('medico-id').value;
     const nome = document.getElementById('medico-nome').value.trim();
     const crm = document.getElementById('medico-crm').value.trim();
-    if (!nome) return alert('Preencha o nome do médico!');
+    if (!nome) return mostrarToast('Preencha o nome do médico!');
     try {
         if (id) await updateDoc(doc(db, 'medicos', id), { nome, crm });
         else await addDoc(collection(db, 'medicos'), { nome, crm });
         fecharModal('modal-medico');
-    } catch (e) { alert('Erro ao salvar.'); }
+        mostrarToast('Médico salvo com sucesso!');
+    } catch (e) { mostrarToast('Erro ao salvar.'); }
 };
 
 window.excluirMedico = async function(id) {
@@ -114,21 +125,15 @@ window.excluirMedico = async function(id) {
 function renderizarCirurgias() {
     const lista = document.getElementById('lista-cirurgias');
     lista.innerHTML = '';
-    const cirurgiasValidas = bdCirurgias.filter(c => c.id !== 'METADADOS_BASE');
-    if (cirurgiasValidas.length === 0) {
-        lista.innerHTML = '<p style="color:#718096;text-align:center;padding:20px;">Nenhuma cirurgia cadastrada.</p>';
-        return;
-    }
+    const cirurgiasValidas = bdCirurgias
+        .filter(c => c.id !== 'METADADOS_BASE')
+        .sort((a, b) => a.nome.localeCompare(b.nome));
+        
+    if (cirurgiasValidas.length === 0) return lista.innerHTML = '<p style="color:#718096;text-align:center;padding:20px;">Nenhum grupo cadastrado.</p>';
     cirurgiasValidas.forEach((cir) => {
-        const total = (cir.exames || []).length;
         const li = document.createElement('li');
-        li.innerHTML = `
-            <div><strong>${cir.nome}</strong><span style="color:#718096; font-size:0.85rem;"> — ${total} exames</span></div>
-            <div class="acoes-lista">
-                <button onclick="abrirModalCirurgia('${cir.id}')">✏️</button>
-                <button onclick="excluirCirurgia('${cir.id}')">🗑️</button>
-            </div>
-        `;
+        li.innerHTML = `<div><strong>${cir.nome}</strong><span style="color:#718096; font-size:0.85rem;"> — ${(cir.exames || []).length} exames ${cir.apenasExames ? '(Apenas Exames)' : ''}</span></div>
+            <div class="acoes-lista"><button onclick="abrirModalCirurgia('${cir.id}')">✏️</button><button onclick="excluirCirurgia('${cir.id}')">🗑️</button></div>`;
         lista.appendChild(li);
     });
 }
@@ -137,14 +142,25 @@ function popularDropdownCirurgias() {
     ['ind-cirurgia', 'lote-cirurgia'].forEach(id => {
         const sel = document.getElementById(id);
         const val = sel.value;
-        sel.innerHTML = '<option value="">-- Selecione a cirurgia --</option>';
-        bdCirurgias.forEach(c => {
-            if (c.id === 'METADADOS_BASE') return;
-            sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
-        });
+        sel.innerHTML = '<option value="">-- Selecione o grupo --</option>';
+        
+        const cirurgiasOrdenadas = bdCirurgias
+            .filter(c => c.id !== 'METADADOS_BASE')
+            .sort((a, b) => a.nome.localeCompare(b.nome));
+            
+        cirurgiasOrdenadas.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
         sel.value = val;
     });
 }
+
+document.getElementById('ind-cirurgia').addEventListener('change', function() {
+    const txt = this.options[this.selectedIndex].text;
+    document.getElementById('ind-proposta').value = txt !== '-- Selecione o grupo --' ? txt : '';
+});
+document.getElementById('lote-cirurgia').addEventListener('change', function() {
+    const txt = this.options[this.selectedIndex].text;
+    document.getElementById('lote-proposta').value = txt !== '-- Selecione o grupo --' ? txt : '';
+});
 
 window.abrirModalCirurgia = function(id = null) {
     ['analises','raio','ultrassom','outros'].forEach(g => document.getElementById('linhas-' + g).innerHTML = '');
@@ -152,8 +168,12 @@ window.abrirModalCirurgia = function(id = null) {
     if (id) {
         const cir = bdCirurgias.find(x => x.id === id);
         document.getElementById('cirurgia-nome').value = cir.nome;
+        document.getElementById('cirurgia-apenas-exames').checked = cir.apenasExames || false;
         (cir.exames || []).forEach(ex => adicionarLinhaExame(ex.grupo, ex.codigo, ex.nome));
-    } else document.getElementById('cirurgia-nome').value = '';
+    } else {
+        document.getElementById('cirurgia-nome').value = '';
+        document.getElementById('cirurgia-apenas-exames').checked = false;
+    }
     document.getElementById('modal-cirurgia').showModal();
 };
 
@@ -168,23 +188,24 @@ window.adicionarLinhaExame = function(grupo = 'analises', codigo = '', nome = ''
 window.salvarCirurgia = async function() {
     const id = document.getElementById('cirurgia-id').value;
     const nome = document.getElementById('cirurgia-nome').value.trim();
-    if (!nome) return alert('Dê um nome!');
+    const apenasExames = document.getElementById('cirurgia-apenas-exames').checked;
+    
+    if (!nome) return mostrarToast('Dê um nome!');
     const exames = [];
     document.querySelectorAll('.linha-exame').forEach(l => {
-        const grupo = l.querySelector('.exame-grupo').value;
-        const codigo = l.querySelector('.exame-codigo').value.trim();
         const nomeEx = l.querySelector('.exame-nome').value.trim();
-        if (nomeEx) exames.push({ grupo, codigo, nome: nomeEx });
+        if (nomeEx) exames.push({ grupo: l.querySelector('.exame-grupo').value, codigo: l.querySelector('.exame-codigo').value.trim(), nome: nomeEx });
     });
     try {
-        if (id) await updateDoc(doc(db, 'cirurgias', id), { nome, exames });
-        else await addDoc(collection(db, 'cirurgias'), { nome, exames });
+        if (id) await updateDoc(doc(db, 'cirurgias', id), { nome, exames, apenasExames });
+        else await addDoc(collection(db, 'cirurgias'), { nome, exames, apenasExames });
         fecharModal('modal-cirurgia');
-    } catch (e) { alert('Erro ao salvar.'); }
+        mostrarToast('Grupo salvo com sucesso!');
+    } catch (e) { mostrarToast('Erro ao salvar.'); }
 };
 
 window.excluirCirurgia = async function(id) {
-    if (confirm('Excluir esta cirurgia?')) await deleteDoc(doc(db, 'cirurgias', id));
+    if (confirm('Excluir este grupo?')) await deleteDoc(doc(db, 'cirurgias', id));
 };
 
 let pacientesLote = [];
@@ -199,10 +220,7 @@ document.getElementById('lote-arquivo').addEventListener('change', function(e) {
         pacientesLote = dados.map(row => {
             const chaves = Object.keys(row);
             const getCol = (...nomes) => {
-                for (const n of nomes) {
-                    const found = chaves.find(k => k.toLowerCase().includes(n.toLowerCase()));
-                    if (found) return String(row[found]).trim();
-                }
+                for (const n of nomes) { const f = chaves.find(k => k.toLowerCase().includes(n.toLowerCase())); if (f) return String(row[f]).trim(); }
                 return '';
             };
             let dataNasc = getCol('nasc', 'data');
@@ -220,38 +238,42 @@ document.getElementById('lote-arquivo').addEventListener('change', function(e) {
 });
 
 window.abrirModalConfig = function() {
+    document.getElementById('config-ano').value = variavelAno;
     document.getElementById('modal-config').showModal();
     atualizarContagemPacientes();
+};
+
+window.salvarAnoConfig = async function() {
+    const ano = document.getElementById('config-ano').value.trim();
+    if (!ano) return mostrarToast('Preencha o ano!');
+    try {
+        await setDoc(doc(db, 'cirurgias', 'METADADOS_BASE'), { ano: ano }, { merge: true });
+        variavelAno = ano;
+        mostrarToast('Ano salvo com sucesso!');
+    } catch (e) { mostrarToast('Erro ao salvar ano.'); }
 };
 
 async function atualizarContagemPacientes() {
     const el = document.getElementById('contagem-pacientes');
     try {
         const docSnap = await getDoc(doc(db, 'cirurgias', 'METADADOS_BASE'));
-        if (docSnap.exists()) {
-            const d = docSnap.data();
-            el.textContent = `📊 Última carga: ${d.ultimoEnvio} pacientes em ${d.dataEnvio}`;
-        } else {
-            el.textContent = "📊 Nenhuma base registrada ainda.";
-        }
+        if (docSnap.exists() && docSnap.data().ultimoEnvio) {
+            el.textContent = `📊 Última carga: ${docSnap.data().ultimoEnvio} pacientes em ${docSnap.data().dataEnvio}`;
+        } else el.textContent = "📊 Nenhuma base registrada ainda.";
     } catch (err) { el.textContent = "📊 Erro ao ler dados."; }
 }
 
 window.subirBasePacientes = async function() {
     const fileInput = document.getElementById('arquivo-nuvem-pacientes');
-    const file = fileInput.files[0];
-    if (!file) return alert('Selecione uma planilha!');
+    if (!fileInput.files[0]) return mostrarToast('Selecione uma planilha!');
     const btn = document.getElementById('btn-subir-base');
     btn.disabled = true;
     const reader = new FileReader();
     reader.onload = async function(ev) {
         try {
             const wb = XLSX.read(ev.target.result, { type: 'binary', cellDates: true });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const dados = XLSX.utils.sheet_to_json(ws, { defval: '' });
-            let batch = writeBatch(db);
-            let count = 0;
-            let total = 0;
+            const dados = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+            let batch = writeBatch(db), count = 0, total = 0;
             for (const row of dados) {
                 const chaves = Object.keys(row);
                 const getCol = (...n) => { for (const name of n) { const f = chaves.find(k => k.toLowerCase().includes(name.toLowerCase())); if (f) return String(row[f]).trim(); } return ''; };
@@ -262,22 +284,17 @@ window.subirBasePacientes = async function() {
                 if (row[chaves.find(k => k.toLowerCase().includes('nasc'))] instanceof Date) dataNasc = row[chaves.find(k => k.toLowerCase().includes('nasc'))].toISOString().split('T')[0];
                 else if (dataNasc.includes('/')) { const p = dataNasc.split('/'); dataNasc = `${p[2]}-${p[1]}-${p[0]}`; }
                 batch.set(doc(db, 'pacientes', matricula), { nome, dataNasc });
-                count++;
-                total++;
+                count++; total++;
                 if (count === 450) { await batch.commit(); batch = writeBatch(db); count = 0; }
             }
             if (count > 0) await batch.commit();
-            await setDoc(doc(db, 'cirurgias', 'METADADOS_BASE'), {
-                ultimoEnvio: total,
-                dataEnvio: new Date().toLocaleDateString('pt-BR')
-            });
-            alert('Base atualizada!');
-            atualizarContagemPacientes();
+            await setDoc(doc(db, 'cirurgias', 'METADADOS_BASE'), { ultimoEnvio: total, dataEnvio: getHojeLocal().split('-').reverse().join('/') }, { merge: true });
+            mostrarToast('Base atualizada com sucesso!');
             fecharModal('modal-config');
-        } catch (e) { alert('Erro ao subir.'); }
-        finally { btn.disabled = false; }
+        } catch (e) { mostrarToast('Erro ao subir base.'); }
+        finally { btn.disabled = false; fileInput.value = ''; }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsBinaryString(fileInput.files[0]);
 };
 
 let timerBuscaMatricula;
@@ -289,13 +306,44 @@ document.getElementById('ind-mat').addEventListener('input', function(e) {
         try {
             const docSnap = await getDoc(doc(db, 'pacientes', matricula));
             if (docSnap.exists()) {
-                const d = docSnap.data();
-                document.getElementById('ind-nome').value = d.nome;
-                if (d.dataNasc) document.getElementById('ind-data').value = d.dataNasc;
+                document.getElementById('ind-nome').value = docSnap.data().nome;
+                if (docSnap.data().dataNasc) document.getElementById('ind-data').value = docSnap.data().dataNasc;
             }
         } catch(err) {}
     }, 600);
 });
+
+async function limparRelatoriosAntigos() {
+    try {
+        const limite = new Date();
+        limite.setMonth(limite.getMonth() - 4);
+        const limiteStr = limite.toISOString().split('T')[0];
+        const snap = await getDocs(query(collection(db, 'relatorios'), where('data_solicitacao', '<', limiteStr)));
+        let batch = writeBatch(db), count = 0;
+        snap.forEach(docSnap => { batch.delete(docSnap.ref); count++; if(count === 450) { batch.commit(); batch = writeBatch(db); count = 0; } });
+        if(count > 0) await batch.commit();
+    } catch(err) {}
+}
+
+window.baixarRelatorio = async function() {
+    const dIni = document.getElementById('rel-data-inicio').value;
+    const dFim = document.getElementById('rel-data-fim').value;
+    if (!dIni || !dFim) return mostrarToast("Preencha as duas datas.");
+    try {
+        mostrarToast("Processando relatório...");
+        await limparRelatoriosAntigos();
+        const snap = await getDocs(collection(db, 'relatorios'));
+        const dadosFiltrados = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.data_solicitacao >= dIni && data.data_solicitacao <= dFim) dadosFiltrados.push({ DATA_SOLICITACAO: data.data_solicitacao, MCV: data.mcv, NOME: data.nome });
+        });
+        if(dadosFiltrados.length === 0) return mostrarToast("Nenhum dado encontrado nesse período.");
+        const ws = XLSX.utils.json_to_sheet(dadosFiltrados);
+        XLSX.writeFile({ Sheets: { 'Relatorio': ws }, SheetNames: ['Relatorio'] }, 'Relatorio_SAPO.xlsx');
+        mostrarToast("Relatório baixado com sucesso!");
+    } catch(err) { mostrarToast("Erro ao baixar relatório."); }
+};
 
 function formatarData(v) { if (!v) return ''; if (typeof v === 'string' && v.includes('-')) { const [y, m, d] = v.split('-'); return `${d}/${m}/${y}`; } return v; }
 
@@ -320,7 +368,7 @@ function dispararImpressao(pdf) {
     iframe.onload = () => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 2000); };
 }
 
-function gerarSADT(pdf, p, m, exames, t, dEmissao, img) {
+function gerarSADT(pdf, p, m, exames, dEmissao, img) {
     pdf.addImage(img, 'JPEG', 0, 0, 210, 297);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
@@ -330,94 +378,162 @@ function gerarSADT(pdf, p, m, exames, t, dEmissao, img) {
     pdf.text(m || '', 75, 147.2);
     pdf.text(dEmissao, 49.5, 84.1);
     let y = 94;
-    exames.forEach(ex => { pdf.text(`${ex.codigo ? ex.codigo + ' - ' : ''}${ex.nome}`, 29.5, y); y += 5; });
+    exames.forEach(ex => { pdf.text(`${ex.codigo ? ex.codigo + ' - ' : ''}${ex.nome}`, 28.5, y); y += 5; });
 }
 
-function gerarAvaliacao(pdf, p, img, ehI) {
+function gerarAvaliacao(pdf, p, img, ehI, proposta, anoVigente) {
     pdf.addImage(img, 'JPEG', 0, 0, 210, 297);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(12);
-    if (ehI) { pdf.text(p.nome, 37.5, 48.5); pdf.text(p.matricula, 164, 48.5); pdf.text(formatarData(p.dataNasc), 54, 56.5)}
-    else { pdf.text(p.nome, 35, 42); pdf.text(p.matricula, 169, 42); pdf.text(formatarData(p.dataNasc), 49, 51); }
+
+    if (ehI) { 
+        pdf.text(p.nome, 37.5, 48.5); 
+        pdf.text(p.matricula, 164, 48.5); 
+        pdf.text(formatarData(p.dataNasc), 54, 56.5);
+        pdf.text(anoVigente, 170, 56.5); 
+        pdf.text(proposta, 85, 67.3);
+    } else { 
+        pdf.text(p.nome, 35, 42); 
+        pdf.text(p.matricula, 169, 42); 
+        pdf.text(formatarData(p.dataNasc), 49, 51);
+        pdf.text(anoVigente, 170, 51); 
+        pdf.text(proposta, 72, 59.8);
+    }
 }
 
-function gerarLembreteDoc(pdf, p, img) {
+function gerarLembreteDoc(pdf, p, img, anoVigente, precisaRaioXTorax) {
     pdf.addImage(img, 'JPEG', 0, 0, 210, 297);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
+    
+    pdf.text(anoVigente, 123, 24.5);
     pdf.text(p.nome, 12, 18);
     pdf.text(p.matricula, 12, 14);
+    pdf.text(anoVigente, 77, 213);
+    pdf.text(anoVigente, 160, 280);
+
+    if (precisaRaioXTorax) {
+        pdf.text("X", 100.8, 81.4); 
+    }
 }
 
-async function gerarPDFPaciente(p, cir, med, dEmissao) {
+async function gerarPDFPaciente(p, cir, med, dEmissao, proposta) {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
     const idade = calcularIdade(p.dataNasc);
     const ehI = idade < 12;
+    const apenasExames = cir.apenasExames === true;
+    
+    const precisaRaioXTorax = !apenasExames && (idade > 60 || (cir.exames || []).some(e => e.nome.toUpperCase().includes('TORAX') || e.nome.toUpperCase().includes('TÓRAX') || e.codigo === '0204030170'));
+
     const imgS = await carregarImagem('./img/sadt.jpg');
     const imgA = await carregarImagem(ehI ? './img/avaliacao_infantil.jpg' : './img/avaliacao.jpg');
     const imgL = await carregarImagem('./img/lembrete.jpg');
     let first = true;
     const addP = () => { if (!first) pdf.addPage(); first = false; };
     const analises = (cir.exames || []).filter(e => e.grupo === 'analises');
-    for (let j = 0; j < analises.length; j += 10) { addP(); gerarSADT(pdf, p, med, analises.slice(j, j + 10), '', dEmissao, imgS); }
-    (cir.exames || []).filter(e => e.grupo !== 'analises').forEach(ex => { addP(); gerarSADT(pdf, p, med, [ex], '', dEmissao, imgS); });
-    addP(); gerarAvaliacao(pdf, p, imgA, ehI);
-    addP(); gerarLembreteDoc(pdf, p, imgL);
+    
+    for (let j = 0; j < analises.length; j += 10) { addP(); gerarSADT(pdf, p, med, analises.slice(j, j + 10), dEmissao, imgS); }
+    (cir.exames || []).filter(e => e.grupo !== 'analises').forEach(ex => { addP(); gerarSADT(pdf, p, med, [ex], dEmissao, imgS); });
+    
+    if (!apenasExames && idade > 60) {
+        addP();
+        gerarSADT(pdf, p, med, [{ codigo: '0204030170', nome: 'RADIOGRAFIA DE TORAX (PA)' }], dEmissao, imgS);
+    }
+
+    if (!apenasExames) {
+        addP(); gerarAvaliacao(pdf, p, imgA, ehI, proposta, variavelAno);
+        addP(); gerarLembreteDoc(pdf, p, imgL, variavelAno, precisaRaioXTorax);
+    }
     return pdf;
 }
 
 window.gerarPDFIndividual = async function() {
+    const btn = document.getElementById('btn-imp-ind');
     const n = document.getElementById('ind-nome').value.trim();
     const cId = document.getElementById('ind-cirurgia').value;
-    if (!n || !cId) return alert('Preencha os dados!');
-    const cir = bdCirurgias.find(c => c.id === cId);
-    let med = null;
-    const mId = document.getElementById('ind-medico').value;
-    if (mId) { const oM = bdMedicos.find(m => m.id === mId); if (oM) med = oM.crm ? `${oM.nome} - CRM: ${oM.crm}` : oM.nome; }
-    const dE = document.getElementById('ind-emissao').value ? formatarData(document.getElementById('ind-emissao').value) : new Date().toLocaleDateString('pt-BR');
-    const p = { matricula: document.getElementById('ind-mat').value.trim(), nome: n, dataNasc: document.getElementById('ind-data').value };
-    const pdf = await gerarPDFPaciente(p, cir, med, dE);
-    dispararImpressao(pdf);
+    const proposta = document.getElementById('ind-proposta').value.trim();
+    if (!n || !cId) return mostrarToast('Preencha os dados obrigatórios!');
+    btn.disabled = true; btn.textContent = '⏳ Gerando...';
+    try {
+        const cir = bdCirurgias.find(c => c.id === cId);
+        let med = null;
+        const mId = document.getElementById('ind-medico').value;
+        if (mId) { const oM = bdMedicos.find(m => m.id === mId); if (oM) med = oM.crm ? `${oM.nome} - CRM: ${oM.crm}` : oM.nome; }
+        const dE = document.getElementById('ind-emissao').value ? formatarData(document.getElementById('ind-emissao').value) : new Date().toLocaleDateString('pt-BR');
+        const p = { matricula: document.getElementById('ind-mat').value.trim(), nome: n, dataNasc: document.getElementById('ind-data').value };
+        const pdf = await gerarPDFPaciente(p, cir, med, dE, proposta);
+        await addDoc(collection(db, 'relatorios'), { data_solicitacao: getHojeLocal(), mcv: p.matricula, nome: p.nome });
+        dispararImpressao(pdf);
+        
+        document.getElementById('ind-mat').value = ''; 
+        document.getElementById('ind-nome').value = ''; 
+        document.getElementById('ind-data').value = ''; 
+    } catch (e) { mostrarToast('Erro ao gerar documento.'); }
+    finally { btn.disabled = false; btn.textContent = '🖨️ Imprimir'; }
 };
 
 window.processarLote = async function() {
-    if (pacientesLote.length === 0) return alert('Carregue a planilha!');
+    if (pacientesLote.length === 0) return mostrarToast('Carregue a planilha!');
     const cId = document.getElementById('lote-cirurgia').value;
-    if (!cId) return alert('Selecione a cirurgia!');
-    const cir = bdCirurgias.find(c => c.id === cId);
-    let med = null;
-    const mId = document.getElementById('lote-medico').value;
-    if (mId) { const oM = bdMedicos.find(m => m.id === mId); if (oM) med = oM.crm ? `${oM.nome} - CRM: ${oM.crm}` : oM.nome; }
-    const dE = document.getElementById('lote-emissao').value ? formatarData(document.getElementById('lote-emissao').value) : new Date().toLocaleDateString('pt-BR');
-    const modalProg = document.getElementById('modal-progresso');
-    const bFill = document.getElementById('barra-fill');
-    modalProg.showModal();
-    const imgS = await carregarImagem('./img/sadt.jpg');
-    const imgA = await carregarImagem('./img/avaliacao.jpg');
-    const imgAI = await carregarImagem('./img/avaliacao_infantil.jpg');
-    const imgL = await carregarImagem('./img/lembrete.jpg');
-    const { jsPDF } = window.jspdf;
-    const pdfFinal = new jsPDF({ unit: 'mm', format: 'a4' });
-    let first = true;
-    for (let i = 0; i < pacientesLote.length; i++) {
-        const p = pacientesLote[i];
-        bFill.style.width = Math.round(((i + 1) / pacientesLote.length) * 100) + '%';
-        await new Promise(r => setTimeout(r, 10));
-        const analises = (cir.exames || []).filter(e => e.grupo === 'analises');
-        const ehI = calcularIdade(p.dataNasc) < 12;
-        const addPag = (fn, ...args) => { if (!first) pdfFinal.addPage(); fn(pdfFinal, ...args); first = false; };
-        for (let j = 0; j < analises.length; j += 10) { addPag(gerarSADT, p, med, analises.slice(j, j + 10), '', dE, imgS); }
-        (cir.exames || []).filter(e => e.grupo !== 'analises').forEach(ex => { addPag(gerarSADT, p, med, [ex], '', dE, imgS); });
-        addPag(gerarAvaliacao, p, ehI ? imgAI : imgA, ehI);
-        addPag(gerarLembreteDoc, p, imgL);
-    }
-    modalProg.close();
-    dispararImpressao(pdfFinal);
+    if (!cId) return mostrarToast('Selecione o grupo!');
+    const proposta = document.getElementById('lote-proposta').value.trim();
+    const btn = document.getElementById('btn-imp-lote');
+    btn.disabled = true;
+    try {
+        const cir = bdCirurgias.find(c => c.id === cId);
+        let med = null;
+        const mId = document.getElementById('lote-medico').value;
+        if (mId) { const oM = bdMedicos.find(m => m.id === mId); if (oM) med = oM.crm ? `${oM.nome} - CRM: ${oM.crm}` : oM.nome; }
+        const dE = document.getElementById('lote-emissao').value ? formatarData(document.getElementById('lote-emissao').value) : new Date().toLocaleDateString('pt-BR');
+        const modalProg = document.getElementById('modal-progresso');
+        const bFill = document.getElementById('barra-fill');
+        modalProg.showModal();
+        const imgS = await carregarImagem('./img/sadt.jpg');
+        const imgA = await carregarImagem('./img/avaliacao.jpg');
+        const imgAI = await carregarImagem('./img/avaliacao_infantil.jpg');
+        const imgL = await carregarImagem('./img/lembrete.jpg');
+        const { jsPDF } = window.jspdf;
+        const pdfFinal = new jsPDF({ unit: 'mm', format: 'a4' });
+        let first = true;
+        let batch = writeBatch(db), countRel = 0;
+        const hoje = getHojeLocal();
+        
+        for (let i = 0; i < pacientesLote.length; i++) {
+            const p = pacientesLote[i];
+            bFill.style.width = Math.round(((i + 1) / pacientesLote.length) * 100) + '%';
+            await new Promise(r => setTimeout(r, 10));
+            const idade = calcularIdade(p.dataNasc);
+            const ehI = idade < 12;
+            const apenasExames = cir.apenasExames === true;
+            
+            const precisaRaioXTorax = !apenasExames && (idade > 60 || (cir.exames || []).some(e => e.nome.toUpperCase().includes('TORAX') || e.nome.toUpperCase().includes('TÓRAX') || e.codigo === '0204030170'));
+
+            const addPag = (fn, ...args) => { if (!first) pdfFinal.addPage(); fn(pdfFinal, ...args); first = false; };
+            const analises = (cir.exames || []).filter(e => e.grupo === 'analises');
+            for (let j = 0; j < analises.length; j += 10) { addPag(gerarSADT, p, med, analises.slice(j, j + 10), dE, imgS); }
+            (cir.exames || []).filter(e => e.grupo !== 'analises').forEach(ex => { addPag(gerarSADT, p, med, [ex], dE, imgS); });
+            
+            if (!apenasExames && idade > 60) addPag(gerarSADT, p, med, [{ codigo: '0204030170', nome: 'RADIOGRAFIA DE TORAX (PA)' }], dE, imgS);
+            
+            if (!apenasExames) {
+                addPag(gerarAvaliacao, p, ehI ? imgAI : imgA, ehI, proposta, variavelAno);
+                addPag(gerarLembreteDoc, p, imgL, variavelAno, precisaRaioXTorax);
+            }
+            
+            batch.set(doc(collection(db, 'relatorios')), { data_solicitacao: hoje, mcv: p.matricula, nome: p.nome });
+            countRel++;
+            if(countRel === 450) { await batch.commit(); batch = writeBatch(db); countRel = 0; }
+        }
+        if(countRel > 0) await batch.commit();
+        modalProg.close();
+        dispararImpressao(pdfFinal);
+    } catch(e) { mostrarToast("Erro ao processar lote."); modalProg.close(); }
+    finally { btn.disabled = false; }
 };
 
 window.fecharModal = function(id) { document.getElementById(id).close(); };
-function setarDataHoje() { const h = new Date().toISOString().split('T')[0]; document.getElementById('ind-emissao').value = h; document.getElementById('lote-emissao').value = h; }
+function setarDataHoje() { const h = getHojeLocal(); document.getElementById('ind-emissao').value = h; document.getElementById('lote-emissao').value = h; }
 async function carregarImagem(c) { const r = await fetch(c); const b = await r.blob(); return new Promise((res) => { const reader = new FileReader(); reader.onloadend = () => res(reader.result); reader.readAsDataURL(b); }); }
 setarDataHoje();
 iniciarListeners();

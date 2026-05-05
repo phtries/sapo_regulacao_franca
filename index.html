@@ -12,13 +12,14 @@
 <body>
     <nav class="topbar">
         <div class="logo-area">
-            <div class="logo">🐸 SAPO</div>
+            <div class="logo" onclick="mudarAba('aba-home')" style="cursor:pointer;">🐸 SAPO</div>
         </div>
         <div class="menu-tabs">
-            <button onclick="mudarAba('aba-medicos')" class="tab-btn active" id="btn-medicos">MÉDICOS</button>
+            <button onclick="mudarAba('aba-medicos')" class="tab-btn" id="btn-medicos">MÉDICOS</button>
             <button onclick="mudarAba('aba-cirurgias')" class="tab-btn" id="btn-cirurgias">CIRURGIAS</button>
             <button onclick="mudarAba('aba-individual')" class="tab-btn" id="btn-individual">PRÉ INDIVIDUAL</button>
             <button onclick="mudarAba('aba-lote')" class="tab-btn" id="btn-lote">PRÉ LOTE</button>
+            <button onclick="mudarAba('aba-relatorios')" class="tab-btn" id="btn-relatorios">RELATÓRIOS</button>
         </div>
         <div class="status-area">
             <div class="status-firebase" id="status-firebase">⏳ Conectando...</div>
@@ -26,7 +27,14 @@
         </div>
     </nav>
 
-    <section id="aba-medicos" class="aba-conteudo active">
+    <section id="aba-home" class="aba-conteudo active home-section">
+        <div class="home-icon">🐸</div>
+        <h1 class="home-title">SAPO</h1>
+        <h2 class="home-title" style="font-size: 1.8rem;">SISTEMA AUTOMATIZADO DE PRÉ-OPERATÓRIO</h2>
+        <h3 class="home-subtitle">SETOR DE REGULAÇÃO - SECRETARIA DE SAÚDE DE FRANCA</h3>
+    </section>
+
+    <section id="aba-medicos" class="aba-conteudo">
         <div class="header-aba">
             <h2>Gerenciar Médicos</h2>
             <button onclick="abrirModalMedico()" class="btn-novo">➕ Novo Médico</button>
@@ -37,8 +45,8 @@
 
     <section id="aba-cirurgias" class="aba-conteudo">
         <div class="header-aba">
-            <h2>Gerenciar Cirurgias e Protocolos</h2>
-            <button onclick="abrirModalCirurgia()" class="btn-novo">➕ Nova Cirurgia</button>
+            <h2>Gerenciar Grupos de Exames</h2>
+            <button onclick="abrirModalCirurgia()" class="btn-novo">➕ Novo Grupo</button>
         </div>
         <div id="loading-cirurgias" class="loading-msg">Carregando...</div>
         <ul id="lista-cirurgias" class="lista-itens"></ul>
@@ -63,10 +71,14 @@
                     <input type="date" id="ind-data">
                 </div>
                 <div class="form-group">
-                    <label>Cirurgia:</label>
+                    <label>Grupo de Exames:</label>
                     <select id="ind-cirurgia">
-                        <option value="">-- Selecione a cirurgia --</option>
+                        <option value="">-- Selecione o grupo --</option>
                     </select>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Cirurgia Proposta:</label>
+                    <input type="text" id="ind-proposta" placeholder="Descreva a cirurgia proposta...">
                 </div>
                 <div class="form-group">
                     <label>Médico Solicitante: <span class="opcional">(opcional)</span></label>
@@ -79,7 +91,7 @@
                     <input type="date" id="ind-emissao">
                 </div>
             </div>
-            <button class="btn-acao" onclick="gerarPDFIndividual()">🖨️ Imprimir</button>
+            <button id="btn-imp-ind" class="btn-acao" onclick="gerarPDFIndividual()">🖨️ Imprimir</button>
         </div>
     </section>
 
@@ -94,10 +106,14 @@
                     <input type="file" id="lote-arquivo" accept=".xlsx,.xls,.ods">
                 </div>
                 <div class="form-group">
-                    <label>Cirurgia (mesma para todos):</label>
+                    <label>Grupo de Exames (mesmo para todos):</label>
                     <select id="lote-cirurgia">
-                        <option value="">-- Selecione a cirurgia --</option>
+                        <option value="">-- Selecione o grupo --</option>
                     </select>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Cirurgia Proposta (mesma para todos):</label>
+                    <input type="text" id="lote-proposta" placeholder="Descreva a cirurgia proposta...">
                 </div>
                 <div class="form-group">
                     <label>Médico Solicitante: <span class="opcional">(opcional)</span></label>
@@ -112,13 +128,33 @@
             </div>
             <div id="lote-preview" class="lote-preview" style="display:none;">
                 <h4>📋 Pacientes encontrados na planilha:</h4>
-                <div class="tabela-wrapper"></div>
-                <table id="tabela-preview">
-                    <thead><tr><th>Matrícula</th><th>Nome</th><th>Data de Nasc.</th></tr></thead>
-                    <tbody id="tbody-preview"></tbody>
-                </table>
+                <div class="tabela-wrapper">
+                    <table id="tabela-preview">
+                        <thead><tr><th>Matrícula</th><th>Nome</th><th>Data de Nasc.</th></tr></thead>
+                        <tbody id="tbody-preview"></tbody>
+                    </table>
+                </div>
             </div>
-            <button class="btn-acao" onclick="processarLote()">🖨️ Imprimir em Lote</button>
+            <button id="btn-imp-lote" class="btn-acao" onclick="processarLote()">🖨️ Imprimir em Lote</button>
+        </div>
+    </section>
+
+    <section id="aba-relatorios" class="aba-conteudo">
+        <div class="header-aba">
+            <h2>Relatório de Pacientes Convocados</h2>
+        </div>
+        <div class="form-card">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Data Inicial:</label>
+                    <input type="date" id="rel-data-inicio">
+                </div>
+                <div class="form-group">
+                    <label>Data Final:</label>
+                    <input type="date" id="rel-data-fim">
+                </div>
+            </div>
+            <button class="btn-acao" onclick="baixarRelatorio()" style="background: #28a745;">📊 Baixar Relatório (.xlsx)</button>
         </div>
     </section>
 
@@ -140,13 +176,17 @@
     </dialog>
 
     <dialog id="modal-cirurgia" class="modal modal-largo">
-        <h3>Cadastrar/Editar Cirurgia</h3>
+        <h3>Cadastrar/Editar Grupo de Exames</h3>
         <input type="hidden" id="cirurgia-id">
         <div class="form-group">
-            <label>Nome da Cirurgia:</label>
+            <label>Nome do Grupo:</label>
             <input type="text" id="cirurgia-nome" placeholder="Ex: Colecistectomia">
         </div>
-        <div class="grupos-exames">
+        <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-top: 5px;">
+            <input type="checkbox" id="cirurgia-apenas-exames" style="width: auto; margin: 0; cursor: pointer;">
+            <label for="cirurgia-apenas-exames" style="margin: 0; cursor: pointer; color: var(--danger);">Apenas Exames</label>
+        </div>
+        <div class="grupos-exames" style="margin-top: 15px;">
             <div class="grupo-bloco">
                 <div class="grupo-header">🧪 Análises Clínicas <span class="grupo-tag">Máx. 10 por SADT</span></div>
                 <div class="grupo-linhas" id="linhas-analises"></div>
@@ -170,7 +210,7 @@
         </div>
         <div class="modal-botoes mt-20">
             <button onclick="fecharModal('modal-cirurgia')" class="btn-cancelar">Cancelar</button>
-            <button onclick="salvarCirurgia()" class="btn-salvar">Salvar Cirurgia</button>
+            <button onclick="salvarCirurgia()" class="btn-salvar">Salvar Grupo</button>
         </div>
     </dialog>
 
@@ -183,17 +223,31 @@
     </dialog>
 
     <dialog id="modal-config" class="modal">
-        <h3>⚙️ Configurações da Base</h3>
-        <p id="contagem-pacientes" class="count-db">📊 Última carga: Carregando...</p>
-        <p class="desc-modal">Suba uma planilha (.xlsx ou .csv) para atualizar o banco de dados na nuvem.</p>
-        <div class="form-group">
-            <input type="file" id="arquivo-nuvem-pacientes" accept=".xlsx,.xls,.ods,.csv">
+        <h3>⚙️ Configurações do Sistema</h3>
+        <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border);">
+            <p class="desc-modal" style="margin-bottom: 10px; font-weight: 600;">Variáveis Globais</p>
+            <div class="form-group" style="display: flex; flex-direction: row; gap: 10px; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label>Ano Vigente (Para Avaliações/Lembretes):</label>
+                    <input type="text" id="config-ano" placeholder="Ex: 2026">
+                </div>
+                <button onclick="salvarAnoConfig()" class="btn-salvar" style="height: 40px;">💾 Salvar Ano</button>
+            </div>
         </div>
-        <div class="modal-botoes mt-20">
-            <button onclick="fecharModal('modal-config')" class="btn-cancelar">Cancelar</button>
-            <button id="btn-subir-base" onclick="subirBasePacientes()" class="btn-salvar-base">🚀 Enviar para Nuvem</button>
+        <div>
+            <p id="contagem-pacientes" class="count-db">📊 Última carga: Carregando...</p>
+            <p class="desc-modal">Suba uma planilha (.xlsx ou .csv) para atualizar o banco de pacientes.</p>
+            <div class="form-group">
+                <input type="file" id="arquivo-nuvem-pacientes" accept=".xlsx,.xls,.ods,.csv">
+            </div>
+            <div class="modal-botoes mt-20">
+                <button onclick="fecharModal('modal-config')" class="btn-cancelar">Fechar</button>
+                <button id="btn-subir-base" onclick="subirBasePacientes()" class="btn-salvar-base">🚀 Enviar para Nuvem</button>
+            </div>
         </div>
     </dialog>
+
+    <div id="toast" class="toast">Notificação</div>
 
     <script type="module" src="script.js"></script>
 </body>
