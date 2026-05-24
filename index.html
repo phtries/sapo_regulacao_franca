@@ -58,37 +58,59 @@
         </div>
         <div class="form-card">
             <div class="form-grid">
-                <div class="form-group">
-                    <label>Matrícula: <span class="sub-label">(Busca automática)</span></label>
-                    <input type="text" id="ind-mat" placeholder="Digite para buscar...">
+                <div style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Matrícula: <span class="sub-label" style="font-size: 0.7rem;">(Auto)</span></label>
+                        <input type="text" id="ind-mat" placeholder="Ex: 123456">
+                    </div>
+                    <div class="form-group">
+                        <label>Data Nasc.:</label>
+                        <input type="date" id="ind-data">
+                    </div>
+                    <div class="form-group">
+                        <label>Cód. CROSS:</label>
+                        <input type="text" id="ind-cross" placeholder="Código">
+                    </div>
                 </div>
-                <div class="form-group">
+
+                <div class="form-group" style="grid-column: span 2;">
                     <label>Nome do Paciente:</label>
                     <input type="text" id="ind-nome" placeholder="Nome completo">
                 </div>
-                <div class="form-group">
-                    <label>Data de Nascimento:</label>
-                    <input type="date" id="ind-data">
+
+                <div class="form-row-metade">
+                    <div class="form-group">
+                        <label>Grupo de Exames:</label>
+                        <select id="ind-cirurgia">
+                            <option value="">-- Selecione o grupo --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cirurgia Proposta:</label>
+                        <input type="text" id="ind-proposta" placeholder="Descreva a cirurgia...">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Grupo de Exames:</label>
-                    <select id="ind-cirurgia">
-                        <option value="">-- Selecione o grupo --</option>
-                    </select>
-                </div>
-                <div class="form-group" style="grid-column: span 2;">
-                    <label>Cirurgia Proposta:</label>
-                    <input type="text" id="ind-proposta" placeholder="Descreva a cirurgia proposta...">
-                </div>
-                <div class="form-group">
-                    <label>Médico Solicitante: <span class="opcional">(opcional)</span></label>
-                    <select id="ind-medico">
-                        <option value="">-- Selecione o médico --</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Data de Emissão:</label>
-                    <input type="date" id="ind-emissao">
+
+                <div style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Médico Solicitante: <span class="opcional">(opcional)</span></label>
+                        <select id="ind-medico">
+                            <option value="">-- Selecione o médico --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Data de Emissão:</label>
+                        <input type="date" id="ind-emissao">
+                    </div>
+                    <div class="form-group turno-wrapper">
+                        <label>Turno:</label>
+                        <div class="turno-toggle selecionado-azul" id="ind-turno-toggle" title="Clique para alternar entre azul e vermelho">
+                            <input type="radio" id="ind-turno-azul" name="ind_turno" value="azul" class="turno-radio" checked>
+                            <input type="radio" id="ind-turno-vermelho" name="ind_turno" value="vermelho" class="turno-radio">
+                            <label for="ind-turno-azul" class="turno-opcao" aria-label="Turno azul"></label>
+                            <label for="ind-turno-vermelho" class="turno-opcao" aria-label="Turno vermelho"></label>
+                        </div>
+                    </div>
                 </div>
             </div>
             <button id="btn-imp-ind" class="btn-acao" onclick="gerarPDFIndividual()">🖨️ Imprimir</button>
@@ -101,36 +123,52 @@
         </div>
         <div class="form-card">
             <div class="form-grid">
-                <div class="form-group">
-                    <label>Selecione a Planilha (.xlsx, .ods):</label>
-                    <input type="file" id="lote-arquivo" accept=".xlsx,.xls,.ods">
-                </div>
-                <div class="form-group">
-                    <label>Grupo de Exames (mesmo para todos):</label>
-                    <select id="lote-cirurgia">
-                        <option value="">-- Selecione o grupo --</option>
-                    </select>
-                </div>
                 <div class="form-group" style="grid-column: span 2;">
-                    <label>Cirurgia Proposta (mesma para todos):</label>
-                    <input type="text" id="lote-proposta" placeholder="Descreva a cirurgia proposta...">
+                    <label>Selecione a Planilha (.xlsx, .csv):</label>
+                    <input type="file" id="lote-arquivo" accept=".xlsx,.xls,.ods,.csv">
                 </div>
-                <div class="form-group">
-                    <label>Médico Solicitante: <span class="opcional">(opcional)</span></label>
-                    <select id="lote-medico">
-                        <option value="">-- Selecione o médico --</option>
-                    </select>
+
+                <div class="form-row-metade">
+                    <div class="form-group">
+                        <label>Grupo de Exames (mesmo p/ todos):</label>
+                        <select id="lote-cirurgia">
+                            <option value="">-- Selecione o grupo --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cirurgia Proposta (mesma p/ todos):</label>
+                        <input type="text" id="lote-proposta" placeholder="Descreva a cirurgia...">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Data de Emissão:</label>
-                    <input type="date" id="lote-emissao">
+
+                <div style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Médico Solicitante: <span class="opcional">(opcional)</span></label>
+                        <select id="lote-medico">
+                            <option value="">-- Selecione o médico --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Data de Emissão:</label>
+                        <input type="date" id="lote-emissao">
+                    </div>
+                    <div class="form-group turno-wrapper">
+                        <label>Turno:</label>
+                        <div class="turno-toggle selecionado-azul" id="lote-turno-toggle" title="Clique para alternar entre azul e vermelho">
+                            <input type="radio" id="lote-turno-azul" name="lote_turno" value="azul" class="turno-radio" checked>
+                            <input type="radio" id="lote-turno-vermelho" name="lote_turno" value="vermelho" class="turno-radio">
+                            <label for="lote-turno-azul" class="turno-opcao" aria-label="Turno azul"></label>
+                            <label for="lote-turno-vermelho" class="turno-opcao" aria-label="Turno vermelho"></label>
+                        </div>
+                    </div>
                 </div>
             </div>
+            
             <div id="lote-preview" class="lote-preview" style="display:none;">
                 <h4>📋 Pacientes encontrados na planilha:</h4>
                 <div class="tabela-wrapper">
                     <table id="tabela-preview">
-                        <thead><tr><th>Matrícula</th><th>Nome</th><th>Data de Nasc.</th></tr></thead>
+                        <thead><tr><th>Matrícula</th><th>Nome</th><th>Data Nasc.</th><th>CROSS</th></tr></thead>
                         <tbody id="tbody-preview"></tbody>
                     </table>
                 </div>
@@ -144,6 +182,9 @@
             <h2>Relatório de Pacientes Convocados</h2>
         </div>
         <div class="form-card">
+            <p style="margin-bottom: 20px; color: var(--text-light); font-size: 0.9rem;">
+                Produção de até quatros meses salva
+            </p>
             <div class="form-grid">
                 <div class="form-group">
                     <label>Data Inicial:</label>
@@ -184,7 +225,7 @@
         </div>
         <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-top: 5px;">
             <input type="checkbox" id="cirurgia-apenas-exames" style="width: auto; margin: 0; cursor: pointer;">
-            <label for="cirurgia-apenas-exames" style="margin: 0; cursor: pointer; color: var(--danger);">Apenas Exames</label>
+            <label for="cirurgia-apenas-exames" style="margin: 0; cursor: pointer; color: var(--danger);">Apenas Exames (Ignora Raio-X Automático, Avaliação e Lembrete)</label>
         </div>
         <div class="grupos-exames" style="margin-top: 15px;">
             <div class="grupo-bloco">
@@ -222,7 +263,7 @@
         </div>
     </dialog>
 
-    <dialog id="modal-config" class="modal">
+    <dialog id="modal-config" class="modal modal-largo">
         <h3>⚙️ Configurações do Sistema</h3>
         <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border);">
             <p class="desc-modal" style="margin-bottom: 10px; font-weight: 600;">Variáveis Globais</p>
@@ -234,6 +275,30 @@
                 <button onclick="salvarAnoConfig()" class="btn-salvar" style="height: 40px;">💾 Salvar Ano</button>
             </div>
         </div>
+        
+        <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border);">
+            <p class="desc-modal" style="margin-bottom: 10px; font-weight: 600;">Configuração de Turnos / Horários</p>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label>Horário (Opção Azul):</label>
+                    <input type="text" id="config-hora-azul" placeholder="Ex: 07:45">
+                </div>
+                <div class="form-group">
+                    <label>Médico (Opção Azul):</label>
+                    <select id="config-med-azul"></select>
+                </div>
+                <div class="form-group">
+                    <label>Horário (Opção Vermelha):</label>
+                    <input type="text" id="config-hora-vermelho" placeholder="Ex: 15:30">
+                </div>
+                <div class="form-group">
+                    <label>Médico (Opção Vermelha):</label>
+                    <select id="config-med-vermelho"></select>
+                </div>
+            </div>
+            <button onclick="salvarTurnosConfig()" class="btn-salvar" style="width: 100%;">💾 Salvar Configurações</button>
+        </div>
+
         <div>
             <p id="contagem-pacientes" class="count-db">📊 Última carga: Carregando...</p>
             <p class="desc-modal">Suba uma planilha (.xlsx ou .csv) para atualizar o banco de pacientes.</p>
