@@ -523,7 +523,7 @@ async function gerarPDFPaciente(p, cir, med, dEmissao, proposta, horarioTurno, m
     const idade = calcularIdade(p.dataNasc);
     const ehI = idade < 12;
     const apenasExames = cir.apenasExames === true;
-    const precisaRaioXTorax = !apenasExames && (idade > 60 || (cir.exames || []).some(e => e.nome.toUpperCase().includes('TORAX') || e.nome.toUpperCase().includes('TÓRAX') || e.codigo === '0204030170'));
+    const precisaRaioXTorax = !apenasExames && (idade >= 60 || (cir.exames || []).some(e => e.nome.toUpperCase().includes('TORAX') || e.nome.toUpperCase().includes('TÓRAX') || e.codigo === '0204030170'));
     const imgS = await carregarImagem('./img/sadt.jpg');
     const imgA = await carregarImagem(ehI ? './img/avaliacao_infantil.jpg' : './img/avaliacao.jpg');
     const imgL = await carregarImagem('./img/lembrete.jpg');
@@ -533,7 +533,7 @@ async function gerarPDFPaciente(p, cir, med, dEmissao, proposta, horarioTurno, m
     
     for (let j = 0; j < analises.length; j += 10) { addP(); gerarSADT(pdf, p, med, analises.slice(j, j + 10), dEmissao, imgS); }
     (cir.exames || []).filter(e => e.grupo !== 'analises').forEach(ex => { addP(); gerarSADT(pdf, p, med, [ex], dEmissao, imgS); });
-    if (!apenasExames && idade > 60) { addP(); gerarSADT(pdf, p, med, [{ codigo: '0204030170', nome: 'RADIOGRAFIA DE TORAX (PA)' }], dEmissao, imgS); }
+    if (!apenasExames && idade >= 60) { addP(); gerarSADT(pdf, p, med, [{ codigo: '0204030170', nome: 'RADIOGRAFIA DE TORAX (PA)' }], dEmissao, imgS); }
     
     if (!apenasExames) {
         addP(); gerarAvaliacao(pdf, p, imgA, ehI, proposta, variavelAno, medicoTurno);
@@ -617,14 +617,14 @@ window.processarLote = async function() {
             const ehI = idade < 12;
             const apenasExames = cir.apenasExames === true;
             
-            const precisaRaioXTorax = !apenasExames && (idade > 60 || (cir.exames || []).some(e => e.nome.toUpperCase().includes('TORAX') || e.nome.toUpperCase().includes('TÓRAX') || e.codigo === '0204030170'));
+            const precisaRaioXTorax = !apenasExames && (idade >= 60 || (cir.exames || []).some(e => e.nome.toUpperCase().includes('TORAX') || e.nome.toUpperCase().includes('TÓRAX') || e.codigo === '0204030170'));
 
             const addPag = (fn, ...args) => { if (!first) pdfFinal.addPage(); fn(pdfFinal, ...args); first = false; };
             const analises = (cir.exames || []).filter(e => e.grupo === 'analises');
             for (let j = 0; j < analises.length; j += 10) { addPag(gerarSADT, p, med, analises.slice(j, j + 10), dE, imgS); }
             (cir.exames || []).filter(e => e.grupo !== 'analises').forEach(ex => { addPag(gerarSADT, p, med, [ex], dE, imgS); });
             
-            if (!apenasExames && idade > 60) addPag(gerarSADT, p, med, [{ codigo: '0204030170', nome: 'RADIOGRAFIA DE TORAX (PA)' }], dE, imgS);
+            if (!apenasExames && idade >= 60) addPag(gerarSADT, p, med, [{ codigo: '0204030170', nome: 'RADIOGRAFIA DE TORAX (PA)' }], dE, imgS);
             
             if (!apenasExames) {
                 addPag(gerarAvaliacao, p, ehI ? imgAI : imgA, ehI, proposta, variavelAno, medicoTurno);
