@@ -241,7 +241,7 @@ window.adicionarLinhaExame = function(grupo = 'analises', codigo = '', nome = ''
     const container = document.getElementById('linhas-' + grupo);
     const div = document.createElement('div');
     div.className = 'linha-exame';
-    div.innerHTML = `<input type="text" class="exame-codigo" placeholder="Cód" value="${codigo}" style="width:80px;"><input type="text" class="exame-nome" placeholder="Exame" value="${nome}" style="flex:1;"><input type="hidden" class="exame-grupo" value="${grupo}"><button onclick="this.parentElement.remove()">✕</button>`;
+    div.innerHTML = `<input type="text" class="exame-codigo" placeholder="Cód" value="${codigo}" style="width:115px;"><input type="text" class="exame-nome" placeholder="Exame" value="${nome}" style="flex:1;"><input type="hidden" class="exame-grupo" value="${grupo}"><button onclick="this.parentElement.remove()">✕</button>`;
     container.appendChild(div);
 };
 
@@ -368,28 +368,58 @@ async function atualizarContagemPacientes() {
 window.subirBasePacientes = async function() {
     const fileInput = document.getElementById('arquivo-nuvem-pacientes');
     if (!fileInput.files[0]) return mostrarToast('Selecione uma planilha!');
+    
     const btn = document.getElementById('btn-subir-base');
+    const infoTexto = document.getElementById('contagem-pacientes');
     btn.disabled = true;
+    
+    infoTexto.textContent = "📊 Lendo o arquivo Excel... Aguarde."; 
+    
     const reader = new FileReader();
     reader.onload = async function(ev) {
         try {
             const wb = XLSX.read(ev.target.result, { type: 'binary', cellDates: true });
             const dados = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+            
             let batch = writeBatch(db), count = 0, total = 0;
+            const totalLinhas = dados.length;
+            
             for (const row of dados) {
                 const { matricula, nome, dataNasc, cross } = extrairDadosDaLinha(row);
                 if (!matricula || !nome) continue;
+                
                 batch.set(doc(db, 'pacientes', matricula), { nome, dataNasc, cross });
                 count++; total++;
-                if (count === 450) { await batch.commit(); batch = writeBatch(db); count = 0; }
+                
+                if (count === 450) { 
+                    infoTexto.textContent = `⏳ Salvando: ${total} de ${totalLinhas} pacientes...`; 
+                    
+                    await batch.commit(); 
+                    batch = writeBatch(db); 
+                    count = 0; 
+            
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
             }
-            if (count > 0) await batch.commit();
+            
+            if (count > 0) {
+                infoTexto.textContent = `⏳ Finalizando os últimos pacientes...`;
+                await batch.commit();
+            }
+            
             await setDoc(doc(db, 'cirurgias', 'METADADOS_BASE'), { ultimoEnvio: total, dataEnvio: getHojeLocal().split('-').reverse().join('/') }, { merge: true });
-            mostrarToast('Base atualizada!');
+            mostrarToast('Base atualizada com sucesso!');
             fecharModal('modal-config');
             atualizarContagemPacientes();
-        } catch (e) { mostrarToast('Erro ao subir base.'); }
-        finally { btn.disabled = false; fileInput.value = ''; }
+            
+        } catch (e) { 
+            mostrarToast('Erro ao subir base.'); 
+            infoTexto.textContent = "📊 Erro durante o processamento.";
+        }
+        finally { 
+            btn.disabled = false; 
+            fileInput.value = ''; 
+        }
     };
     reader.readAsBinaryString(fileInput.files[0]);
 };
@@ -458,13 +488,42 @@ function calcularIdade(data) {
     return i;
 }
 
+/*
 function dispararImpressao(pdf) {
     const blob = pdf.output('bloburl');
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     iframe.src = blob;
     document.body.appendChild(iframe);
-    iframe.onload = () => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 2000); };
+    iframe.onload = () => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 150000); };
+}
+*/
+/// funcao comentada pois o timeout do iframe da impressao nao permitia ajustes de impressao, ao inves de aumentar o timeout implementei a identificacao de cada iframe pendente (falta testar no dia dia, mas para poucos pacientes funcionou bem)
+
+function dispararImpressao(pdf) {
+    const iframeAntigo = document.getElementById('iframe-impressao');
+    if (iframeAntigo) {
+        iframeAntigo.remove();
+    }
+
+    const blob = pdf.output('bloburl');
+    const iframe = document.createElement('iframe');
+    
+    iframe.id = 'iframe-impressao'; 
+    iframe.style.display = 'none';
+    iframe.src = blob;
+    document.body.appendChild(iframe);
+    
+    iframe.onload = () => { 
+        iframe.contentWindow.focus(); 
+        iframe.contentWindow.print(); 
+        
+        setTimeout(() => {
+            if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+            }
+        }, 120000); 
+    };
 }
 
 function gerarSADT(pdf, p, m, exames, dEmissao, img) {
